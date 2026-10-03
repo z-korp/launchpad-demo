@@ -1,0 +1,5 @@
+{
+  "name": "greeting",
+  "run": "node .launchpad/checks/round-1/test.mjs",
+  "timeoutSeconds": 60
+}

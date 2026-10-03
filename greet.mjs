@@ -1,3 +1,4 @@
-export const greet = (name) => `Hello, ${name}!`;
-
-export const farewell = (name) => `Goodbye, ${name}!`;
+/** Greets someone by name. */
+export function greet(name) {
+  return "Hello, " + name + "!";
+}

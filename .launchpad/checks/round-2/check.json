@@ -1,0 +1,8 @@
+{
+  "name": "farewell",
+  "run": "node .launchpad/checks/round-2/test.mjs",
+  "timeoutSeconds": 60,
+  "tests": [
+    "farewell(\"Ada\")"
+  ]
+}

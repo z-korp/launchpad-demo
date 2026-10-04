@@ -24,7 +24,9 @@ item containing JSON. Application errors have `isError: true` and an
 Requests run as synchronous transactions within the server process. Expired
 leases are removed at the next valid tool call. Each change writes a temporary
 file beside the state file, flushes it, renames it over the state file, and
-flushes the directory. In-memory state changes after the rename. Corrupt state
+flushes the directory. In-memory state changes after the rename. Directory access is checked before
+writing. A directory flush failure after rename is logged to stderr; the operation
+is already committed, but crash durability is uncertain. Corrupt state
 fails startup rather than silently losing submissions. Keep the tasks file
 unchanged when restarting an existing board.
 

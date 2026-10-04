@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mkdtempSync, writeFileSync, readFileSync, mkdirSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, readFileSync, mkdirSync, chmodSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { TaskBoard } from "../src/board.js";
@@ -41,6 +41,16 @@ describe("transaction boundaries", () => {
       board.execute("claim", { task_id: "__proto__", agent_id: "b" });
       expect(new TaskBoard(f.tasksFile, state).execute("status", { task_id: "__proto__" })).toMatchObject({ claimed_by: "b" });
     } finally { rmSync(f.directory, { recursive: true }); }
+  });
+
+  it("checks directory access before committing a transaction", () => {
+    const f = fixture(); const directory = join(f.directory, "write-only");
+    mkdirSync(directory, 0o300);
+    try {
+      const board = new TaskBoard(f.tasksFile, join(directory, "state.json"));
+      expect(() => board.execute("claim", { task_id: "__proto__", agent_id: "a" })).toThrow();
+      expect(board.execute("status", { task_id: "__proto__" })).toMatchObject({ status: "open" });
+    } finally { chmodSync(directory, 0o700); rmSync(f.directory, { recursive: true }); }
   });
 
   it("refuses malformed persisted state without overwriting it", () => {

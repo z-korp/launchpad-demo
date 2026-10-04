@@ -64,20 +64,26 @@ export class TaskBoard {
   }
 
   // Each request is a synchronous transaction: no other request can interleave its checks and write.
-  // Replace durable state before publishing the new map in memory. Failed writes leave memory unchanged.
+  // Failures before rename leave memory unchanged; rename is the commit point.
   private persist(next: Map<string, Entry>) {
     const temporary = `${this.stateFile}.${randomUUID()}.tmp`;
     let fd: number | undefined;
+    const directory = openSync(dirname(this.stateFile), "r");
     try {
+      // Establish directory access and flush support before the commit point.
+      fsyncSync(directory);
       fd = openSync(temporary, "wx", 0o600);
       writeFileSync(fd, JSON.stringify({ version: 1, entries: [...next] }) + "\n");
       fsyncSync(fd);
       closeSync(fd); fd = undefined;
       renameSync(temporary, this.stateFile);
       this.entries = next;
-      const directory = openSync(dirname(this.stateFile), "r");
-      try { fsyncSync(directory); } finally { closeSync(directory); }
+      try { fsyncSync(directory); } catch (error) {
+        // Rename already committed: report success, but warn that crash durability is uncertain.
+        console.error("State committed, directory flush failed:", error);
+      }
     } finally {
+      closeSync(directory);
       if (fd !== undefined) closeSync(fd);
       try { unlinkSync(temporary); } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;

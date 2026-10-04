@@ -1,0 +1,7 @@
+{
+  "tasks": [
+    { "id": "T1", "title": "Scaffold repo", "priority": 1, "reward_shares": 100, "depends_on": [] },
+    { "id": "T2", "title": "Add CI", "priority": 2, "reward_shares": 50, "depends_on": ["T1"] },
+    { "id": "T3", "title": "Write README", "priority": 2, "reward_shares": 80, "depends_on": [] }
+  ]
+}

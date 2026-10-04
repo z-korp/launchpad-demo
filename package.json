@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "start": "tsx src/index.ts",
-    "test": "vitest run tests"
+    "test": "vitest run tests",
+    "test:unit": "vitest run test/",
+    "typecheck": "tsc -p ."
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.1",

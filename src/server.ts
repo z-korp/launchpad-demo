@@ -2,7 +2,7 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CallToolRequestSchema, ListToolsRequestSchema, type CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { TaskBoard } from "./board.js";
-import { BoardError } from "./errors.js";
+import { BoardError, type ErrorCode } from "./errors.js";
 
 const id = z
   .string({ required_error: "is required", invalid_type_error: "must be a string" })
@@ -49,7 +49,7 @@ const TOOLS: { name: ToolName; description: string; inputSchema: { type: "object
 ];
 
 const ok = (payload: unknown): CallToolResult => ({ content: [{ type: "text", text: JSON.stringify(payload) }] });
-const fail = (code: string, message: string): CallToolResult => ({
+const fail = (code: ErrorCode, message: string): CallToolResult => ({
   content: [{ type: "text", text: JSON.stringify({ error: { code, message } }) }],
   isError: true,
 });

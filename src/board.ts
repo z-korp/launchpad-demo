@@ -1,5 +1,5 @@
 import { BoardError } from "./errors.js";
-import type { BoardState, Lease, StateStore } from "./state.js";
+import type { BoardState, Lease, StateStore, Submission } from "./state.js";
 import type { Task } from "./tasks.js";
 
 export type TaskStatus = "open" | "claimed" | "submitted";
@@ -75,7 +75,7 @@ export class TaskBoard {
   status(taskId: string): TaskDetails {
     const task = this.getTask(taskId);
     const lease = this.activeLease(task.id, this.now());
-    const submission = this.state.submissions[task.id];
+    const submission = this.submission(task.id);
     return {
       id: task.id,
       title: task.title,
@@ -145,8 +145,13 @@ export class TaskBoard {
     return task;
   }
 
+  // Own-property lookups only: a task id such as "constructor" must not match Object.prototype.
+  private submission(taskId: string): Submission | undefined {
+    return Object.hasOwn(this.state.submissions, taskId) ? this.state.submissions[taskId] : undefined;
+  }
+
   private isSubmitted(taskId: string): boolean {
-    return taskId in this.state.submissions;
+    return this.submission(taskId) !== undefined;
   }
 
   /** Not submitted, no active lease, and every dependency submitted. */
@@ -155,7 +160,7 @@ export class TaskBoard {
   }
 
   private activeLease(taskId: string, now: number): Lease | undefined {
-    const lease = this.state.leases[taskId];
+    const lease = Object.hasOwn(this.state.leases, taskId) ? this.state.leases[taskId] : undefined;
     return lease && Date.parse(lease.expires_at) > now ? lease : undefined;
   }
 

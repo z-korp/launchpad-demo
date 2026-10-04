@@ -59,6 +59,17 @@ describe("TaskBoard leases", () => {
   });
 });
 
+describe("TaskBoard task ids", () => {
+  it("treats ids that shadow Object.prototype as ordinary tasks", () => {
+    const b = new TaskBoard([T("constructor", 1, 1), T("toString", 1, 1, ["constructor"])], { leaseMs: 60_000, store: new MemoryStore() });
+    expect(b.listTasks().tasks.map((t) => t.id)).toEqual(["constructor"]);
+    expect(b.status("toString")).toMatchObject({ status: "open", blocked_by: ["constructor"], submitted_by: null });
+    b.claim("constructor", "a");
+    b.submit("constructor", "a", SHA);
+    expect(b.listTasks().tasks.map((t) => t.id)).toEqual(["toString"]);
+  });
+});
+
 describe("TaskBoard persistence", () => {
   it("leaves the board unchanged when saving fails", () => {
     const store = new MemoryStore();

@@ -1,4 +1,4 @@
-import { closeSync, fsyncSync, openSync, readFileSync, renameSync, writeSync } from "node:fs";
+import { closeSync, fsyncSync, openSync, readFileSync, renameSync, rmSync, writeSync } from "node:fs";
 import { z } from "zod";
 
 const LeaseSchema = z.object({ agent_id: z.string(), expires_at: z.string() });
@@ -53,13 +53,18 @@ export class FileStateStore implements StateStore {
    */
   save(state: BoardState): void {
     const tmp = `${this.file}.${process.pid}.tmp`;
-    const fd = openSync(tmp, "w", 0o600);
     try {
-      writeSync(fd, JSON.stringify(state, null, 2) + "\n");
-      fsyncSync(fd);
-    } finally {
-      closeSync(fd);
+      const fd = openSync(tmp, "w", 0o600);
+      try {
+        writeSync(fd, JSON.stringify(state, null, 2) + "\n");
+        fsyncSync(fd);
+      } finally {
+        closeSync(fd);
+      }
+      renameSync(tmp, this.file);
+    } catch (e) {
+      rmSync(tmp, { force: true });
+      throw e;
     }
-    renameSync(tmp, this.file);
   }
 }

@@ -39,10 +39,36 @@ export function parseTasks(raw: unknown): Task[] {
   for (const task of tasks) {
     for (const dep of task.depends_on) {
       if (!ids.has(dep)) throw new Error(`invalid tasks file: task ${JSON.stringify(task.id)} depends on unknown task ${JSON.stringify(dep)}`);
-      if (dep === task.id) throw new Error(`invalid tasks file: task ${JSON.stringify(task.id)} depends on itself`);
     }
   }
+  const cycle = findCycle(tasks);
+  if (cycle) throw new Error(`invalid tasks file: dependency cycle ${cycle.join(" -> ")}: these tasks could never be claimed`);
   return tasks;
+}
+
+/** Returns one dependency cycle as a list of ids (first id repeated at the end), or undefined. */
+function findCycle(tasks: Task[]): string[] | undefined {
+  const deps = new Map(tasks.map((t) => [t.id, t.depends_on]));
+  const done = new Set<string>();
+  const path: string[] = [];
+  const visit = (id: string): string[] | undefined => {
+    if (done.has(id)) return undefined;
+    const at = path.indexOf(id);
+    if (at >= 0) return [...path.slice(at), id];
+    path.push(id);
+    for (const dep of deps.get(id) ?? []) {
+      const cycle = visit(dep);
+      if (cycle) return cycle;
+    }
+    path.pop();
+    done.add(id);
+    return undefined;
+  };
+  for (const task of tasks) {
+    const cycle = visit(task.id);
+    if (cycle) return cycle;
+  }
+  return undefined;
 }
 
 export function loadTasks(file: string): Task[] {

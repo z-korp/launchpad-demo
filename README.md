@@ -24,4 +24,5 @@ npm run typecheck
 
 Each tool call runs synchronously on the board, so concurrent calls cannot interleave; a change is written to
 `STATE_FILE` (temporary file, fsync, rename) before the call answers. Lease expiry is evaluated lazily from the
-stored expiry time, so leases survive a restart unchanged.
+stored expiry time, so leases survive a restart unchanged. One server process owns a `STATE_FILE`: the state is
+read at startup only, so two processes must not share one file.

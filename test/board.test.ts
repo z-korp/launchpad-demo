@@ -105,6 +105,14 @@ describe("TaskBoard persistence", () => {
     const file = join(mkdtempSync(join(tmpdir(), "board-")), "state.json");
     writeFileSync(file, "{not json");
     expect(() => new FileStateStore(file).load()).toThrow(/not valid JSON/);
+    writeFileSync(file, JSON.stringify({ version: 1, leases: { T1: { agent_id: "a", expires_at: "soon" } }, submissions: {} }));
+    expect(() => new FileStateStore(file).load()).toThrow(/leases.T1.expires_at/);
+  });
+
+  it("ignores a stored lease on a task no longer in the tasks file", () => {
+    const store = new MemoryStore({ version: 1, leases: { gone: { agent_id: "a", expires_at: "2030-01-01T00:00:00.000Z" } }, submissions: {} });
+    const { b } = board({ store });
+    expect(b.claim("T1", "a").task_id).toBe("T1");
   });
 });
 
@@ -119,11 +127,14 @@ describe("configuration", () => {
     expect(() => loadConfig({})).toThrow(/TASKS_FILE/);
     expect(() => loadConfig({ TASKS_FILE: "t.json", LEASE_SECONDS: "0" })).toThrow(/LEASE_SECONDS/);
     expect(() => loadConfig({ TASKS_FILE: "t.json", LEASE_SECONDS: "soon" })).toThrow(/LEASE_SECONDS/);
+    expect(() => loadConfig({ TASKS_FILE: "t.json", LEASE_SECONDS: "1e20" })).toThrow(/LEASE_SECONDS/);
   });
 
   it("rejects duplicate ids and unknown dependencies in the tasks file", () => {
     expect(() => parseTasks({ tasks: [T("A", 1, 1), T("A", 2, 1)] })).toThrow(/duplicate/);
     expect(() => parseTasks({ tasks: [T("A", 1, 1, ["B"])] })).toThrow(/unknown task/);
     expect(() => parseTasks({ tasks: [{ ...T("A", 1, 1), reward_shares: 0 }] })).toThrow(/reward_shares/);
+    expect(() => parseTasks({ tasks: [T("A", 1, 1, ["A"])] })).toThrow(/cycle A -> A/);
+    expect(() => parseTasks({ tasks: [T("A", 1, 1, ["B"]), T("B", 1, 1, ["C"]), T("C", 1, 1, ["A"])] })).toThrow(/cycle A -> B -> C -> A/);
   });
 });

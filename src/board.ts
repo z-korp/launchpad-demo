@@ -164,9 +164,9 @@ export class TaskBoard {
     return lease && Date.parse(lease.expires_at) > now ? lease : undefined;
   }
 
-  /** The id of the task on which the agent holds an active lease, if any. */
+  /** The id of the task on which the agent holds an active lease, if any. Leases on tasks no longer listed don't count. */
   private leaseHeldBy(agentId: string, now: number): string | undefined {
-    return Object.keys(this.state.leases).find((taskId) => this.activeLease(taskId, now)?.agent_id === agentId);
+    return [...this.tasks.keys()].find((taskId) => this.activeLease(taskId, now)?.agent_id === agentId);
   }
 
   private statusOf(taskId: string, lease: Lease | undefined): TaskStatus {

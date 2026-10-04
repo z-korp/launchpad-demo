@@ -1,8 +1,10 @@
 import { closeSync, fsyncSync, openSync, readFileSync, renameSync, rmSync, writeSync } from "node:fs";
+import { dirname } from "node:path";
 import { z } from "zod";
 
-const LeaseSchema = z.object({ agent_id: z.string(), expires_at: z.string() });
-const SubmissionSchema = z.object({ agent_id: z.string(), commit_hash: z.string(), submitted_at: z.string() });
+const timestamp = z.string().refine((s) => !Number.isNaN(Date.parse(s)), "must be an ISO 8601 timestamp");
+const LeaseSchema = z.object({ agent_id: z.string(), expires_at: timestamp });
+const SubmissionSchema = z.object({ agent_id: z.string(), commit_hash: z.string(), submitted_at: timestamp });
 
 const StateSchema = z.object({
   version: z.literal(1),
@@ -42,7 +44,10 @@ export class FileStateStore implements StateStore {
       throw new Error(`STATE_FILE ${this.file} is not valid JSON: ${(e as Error).message}`);
     }
     const parsed = StateSchema.safeParse(raw);
-    if (!parsed.success) throw new Error(`STATE_FILE ${this.file} has an unexpected shape: ${parsed.error.issues[0].message}`);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      throw new Error(`STATE_FILE ${this.file} has an unexpected shape at ${issue.path.join(".") || "<root>"}: ${issue.message}`);
+    }
     return parsed.data;
   }
 
@@ -66,5 +71,19 @@ export class FileStateStore implements StateStore {
       rmSync(tmp, { force: true });
       throw e;
     }
+    syncDirectory(dirname(this.file));
+  }
+}
+
+/** Makes the rename itself durable. Best effort: some platforms and file systems cannot fsync a directory. */
+function syncDirectory(dir: string): void {
+  let fd: number | undefined;
+  try {
+    fd = openSync(dir, "r");
+    fsyncSync(fd);
+  } catch {
+    // The state file is already complete and renamed; only its durability across a power loss is weaker.
+  } finally {
+    if (fd !== undefined) closeSync(fd);
   }
 }

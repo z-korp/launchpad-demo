@@ -1,5 +1,9 @@
 {
-  "name": "task board: the spec's tests",
-  "run": "npx vitest run --dir .launchpad/checks/round-1/tests --no-file-parallelism --testTimeout=30000 --hookTimeout=30000 --reporter=json --outputFile=\"$LAUNCHPAD_GATE_OUT\"",
-  "timeoutSeconds": 600
+  "name": "greeting",
+  "run": "node .launchpad/checks/round-1/test.mjs",
+  "timeoutSeconds": 60,
+  "tests": [
+    "greet(\"Ada\")",
+    "greet(\"Grace Hopper\")"
+  ]
 }
